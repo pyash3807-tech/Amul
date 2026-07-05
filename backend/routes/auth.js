@@ -4,31 +4,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Helper to seed admin
-const seedAdmin = async () => {
-  try {
-    const adminExists = await User.findOne({ username: 'admin' });
-    if (!adminExists) {
-      const hashedPassword = await bcrypt.hash('amul123', 10);
-      await User.create({
-        companyName: 'Yash Milk Marketing-Rajkot-1007459M',
-        username: 'admin',
-        password: hashedPassword,
-        firstName: 'AAA',
-        lastName: 'CCC',
-        type: 'Admin',
-        status: 'Active',
-        role: 'Administrator'
-      });
-      console.log('Seeded default admin user (admin / amul123)');
-    }
-  } catch (error) {
-    console.error('Error seeding admin:', error);
-  }
-};
-
-// Seed immediately on import
-seedAdmin();
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {

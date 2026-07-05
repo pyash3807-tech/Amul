@@ -3,29 +3,6 @@ const router = express.Router();
 const Transaction = require('../models/Transaction');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// Seed sample transactions if empty
-const seedSampleTransactions = async () => {
-  try {
-    const count = await Transaction.countDocuments();
-    if (count === 0) {
-      const samples = [
-        { date: '2026-05-09', from: 'Yash Milk', to: 'Drogheria Sellers-Mavdi', type: 'Debit', payment: 'Cash', amount: 15420, adjust: 0, reference: 'T-199', remark: 'Order payment' },
-        { date: '2026-05-09', from: 'Yash Milk', to: 'Zomato Hyperpure-Raiyadhar', type: 'Debit', payment: 'Cash', amount: 32948, adjust: 0, reference: 'R/T-197', remark: 'Daily supply debit' },
-        { date: '2026-05-09', from: 'Yash Milk', to: 'Zomato Hyperpure-Mavdi', type: 'Debit', payment: 'Cash', amount: 24350, adjust: 0, reference: 'R/T-196', remark: 'Store supply debit' },
-        { date: '2026-05-08', from: 'Yash Milk', to: 'Drogheria Sellers-Mavdi', type: 'Debit', payment: 'Cash', amount: 14200, adjust: 0, reference: 'R/T-193', remark: 'Previous day order' },
-        { date: '2026-05-07', from: 'Customer', to: 'Yash Milk Marketing', type: 'Credit', payment: 'Bank', amount: 80000, adjust: 0, reference: 'C-180', remark: 'Direct bank credit' }
-      ];
-
-      await Transaction.insertMany(samples);
-      console.log('Seeded 5 sample ledger transactions');
-    }
-  } catch (error) {
-    console.error('Error seeding transactions:', error);
-  }
-};
-
-setTimeout(seedSampleTransactions, 1000);
-
 router.use(authMiddleware);
 
 // GET /api/accounts/transactions

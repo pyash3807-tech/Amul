@@ -36,3 +36,7 @@ pnpm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Agent and system files
+.agents/
+skills-lock.json
