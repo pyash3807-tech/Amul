@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useRef } from 'react';
 import styled, { createGlobalStyle } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { ThemeContext } from '../context/ThemeContext';
@@ -1272,6 +1272,9 @@ const Orders = ({ setActiveTab, token }) => {
   const { theme } = useContext(ThemeContext);
   const { t } = useTranslation();
 
+  const mainDatePickerRef = useRef(null);
+  const editDatePickerRef = useRef(null);
+
   const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
   const [activeShift, setActiveShift] = useState('All');
   const [orders, setOrders] = useState([]);
@@ -2453,14 +2456,15 @@ const Orders = ({ setActiveTab, token }) => {
         </Breadcrumb>
 
         <EditControlsCard theme={theme}>
-          <SelectDateWrapper theme={theme}>
+          <SelectDateWrapper theme={theme} onClick={() => editDatePickerRef.current && editDatePickerRef.current.setOpen(true)} style={{ cursor: 'pointer' }}>
             <FloatingLabel theme={theme}>Select Date</FloatingLabel>
             <DatePicker 
+              ref={editDatePickerRef}
               selected={selectedDate} 
               onChange={(date) => { setSelectedDate(date); setEditingOrder(prev => ({ ...prev, date: date.toISOString().split('T')[0] })); }}
               dateFormat="dd-MM-yyyy"
             />
-            <Calendar size={16} style={{ color: theme.muted, pointerEvents: 'none' }} />
+            <Calendar size={16} style={{ color: theme.muted }} />
           </SelectDateWrapper>
 
           <SwitchContainer>
@@ -2684,14 +2688,15 @@ const Orders = ({ setActiveTab, token }) => {
       </Breadcrumb>
 
       <EditControlsCard theme={theme} style={{ padding: '16px 20px', gap: '16px', alignItems: 'center' }}>
-        <SelectDateWrapper theme={theme}>
+        <SelectDateWrapper theme={theme} onClick={() => mainDatePickerRef.current && mainDatePickerRef.current.setOpen(true)} style={{ cursor: 'pointer' }}>
           <FloatingLabel theme={theme}>Select Date</FloatingLabel>
           <DatePicker 
+            ref={mainDatePickerRef}
             selected={selectedDate} 
             onChange={(date) => setSelectedDate(date)}
             dateFormat="dd-MM-yyyy"
           />
-          <Calendar size={16} style={{ color: theme.muted, pointerEvents: 'none' }} />
+          <Calendar size={16} style={{ color: theme.muted }} />
         </SelectDateWrapper>
 
         <SelectShiftWrapper theme={theme}>

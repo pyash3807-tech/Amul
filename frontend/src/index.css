@@ -39,9 +39,13 @@ code {
   background-color: rgba(145, 158, 171, 0.5);
 }
 
-/* Smooth transitions */
-*, *::before, *::after {
-  transition-property: none;
+/* Smooth transitions and micro-interactions */
+button, input, select, textarea, a {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:active {
+  transform: scale(0.97);
 }
 
 /* Selection color */

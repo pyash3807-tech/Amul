@@ -828,10 +828,9 @@ const Account = ({ setActiveTab: setAppActiveTab, token }) => {
       </html>
     `;
 
-    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
-    const url = URL.createObjectURL(blob);
+    const base64 = window.btoa(unescape(encodeURIComponent(tableHtml)));
     const link = document.createElement('a');
-    link.href = url;
+    link.href = 'data:application/vnd.ms-excel;base64,' + base64;
     link.download = `Account_Ledger_${retailerSel}_${startDateStr}_to_${endDateStr}.xls`;
     document.body.appendChild(link);
     link.click();

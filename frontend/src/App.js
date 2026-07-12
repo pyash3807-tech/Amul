@@ -14,12 +14,32 @@ import Account from './pages/Account';
 function AppContent() {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    const hash = window.location.hash.replace('#/', '');
+    return hash || 'dashboard';
+  });
+
+  // Sync tab with URL hash for browser back/forward navigation support
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#/', '');
+      if (hash && hash !== activeTab) {
+        setActiveTab(hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [activeTab]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    window.location.hash = `#/${tab}`;
+  };
 
   const handleLoginSuccess = (userToken, userData) => {
     setToken(userToken);
     setUser(userData);
-    setActiveTab('dashboard');
+    handleTabChange('dashboard');
   };
 
   const handleLogout = () => {
@@ -35,28 +55,28 @@ function AppContent() {
   const renderActivePage = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard setActiveTab={setActiveTab} token={token} />;
+        return <Dashboard setActiveTab={handleTabChange} token={token} />;
       case 'companies':
-        return <Companies setActiveTab={setActiveTab} token={token} />;
+        return <Companies setActiveTab={handleTabChange} token={token} />;
       case 'users':
-        return <Users setActiveTab={setActiveTab} token={token} />;
+        return <Users setActiveTab={handleTabChange} token={token} />;
       case 'orders':
-        return <Orders setActiveTab={setActiveTab} token={token} />;
+        return <Orders setActiveTab={handleTabChange} token={token} />;
       case 'vehicles':
-        return <Vehicles setActiveTab={setActiveTab} token={token} />;
+        return <Vehicles setActiveTab={handleTabChange} token={token} />;
       case 'workers':
-        return <Workers setActiveTab={setActiveTab} token={token} />;
+        return <Workers setActiveTab={handleTabChange} token={token} />;
       case 'account':
-        return <Account setActiveTab={setActiveTab} token={token} />;
+        return <Account setActiveTab={handleTabChange} token={token} />;
       default:
-        return <Dashboard setActiveTab={setActiveTab} token={token} />;
+        return <Dashboard setActiveTab={handleTabChange} token={token} />;
     }
   };
 
   return (
     <Layout 
       activeTab={activeTab} 
-      setActiveTab={setActiveTab} 
+      setActiveTab={handleTabChange} 
       onLogout={handleLogout} 
       user={user}
     >
