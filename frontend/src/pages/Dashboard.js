@@ -396,7 +396,7 @@ const Dashboard = ({ setActiveTab, token }) => {
   useEffect(() => {
     const fetchSummary = async () => {
       try {
-        const todayStr = '2026-05-31'; // Lock to today's date from metadata for consistency
+        const todayStr = new Date().toISOString().split('T')[0];
         const res = await axios.get(`/api/orders/summary?date=${todayStr}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -544,10 +544,7 @@ const Dashboard = ({ setActiveTab, token }) => {
             <ArrowRight size={16} />
           </ViewBtn>
 
-          <DownloadBtn theme={theme} onClick={() => window.print()}>
-            <Download size={18} />
-            {t('Download Report')}
-          </DownloadBtn>
+
         </ButtonRow>
       </QuickActionsCard>
     </Container>

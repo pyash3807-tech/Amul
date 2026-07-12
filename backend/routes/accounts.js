@@ -8,7 +8,7 @@ router.use(authMiddleware);
 // GET /api/accounts/transactions
 router.get('/transactions', async (req, res) => {
   try {
-    const { type, search, payment } = req.query;
+    const { type, search, payment, startDate, endDate } = req.query;
     let query = {};
 
     if (type && type !== 'All') {
@@ -16,6 +16,13 @@ router.get('/transactions', async (req, res) => {
     }
     if (payment && payment !== 'All') {
       query.payment = payment;
+    }
+    if (startDate && endDate) {
+      query.date = { $gte: startDate, $lte: endDate };
+    } else if (startDate) {
+      query.date = { $gte: startDate };
+    } else if (endDate) {
+      query.date = { $lte: endDate };
     }
     if (search) {
       query.$or = [

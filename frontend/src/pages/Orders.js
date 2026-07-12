@@ -1166,7 +1166,7 @@ const DISTRIBUTOR_INFO = {
 };
 
 const SUPPLIER_INFO = {
-  name: 'KPS Report',
+  name: 'Amul',
   address: '123 Milk Street, Main Road, Rajkot, Rajkot - 360001, Gujarat - India',
   fssai: '12345678901234',
   placeOfSupply: 'Rajkot Region',
@@ -1272,7 +1272,7 @@ const Orders = ({ setActiveTab, token }) => {
   const { theme } = useContext(ThemeContext);
   const { t } = useTranslation();
 
-  const [selectedDate, setSelectedDate] = useState(new Date('2026-05-31')); // Lock default to 2026-05-31
+  const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
   const [activeShift, setActiveShift] = useState('All');
   const [orders, setOrders] = useState([]);
   const [retailers, setRetailers] = useState([]);
@@ -1285,8 +1285,8 @@ const Orders = ({ setActiveTab, token }) => {
   const [collectionModal, setCollectionModal] = useState({
     isOpen: false,
     retailerName: null,
-    fromDate: new Date('2026-05-31'),
-    toDate: new Date('2026-05-31')
+    fromDate: new Date(),
+    toDate: new Date()
   });
   
   // Navigation State
@@ -1539,7 +1539,7 @@ const Orders = ({ setActiveTab, token }) => {
     // Header
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
-    doc.text("Yash Milk Marketing - KPS Report", 14, 20);
+    doc.text("Yash Milk Marketing - Amul", 14, 20);
     
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
@@ -2460,7 +2460,7 @@ const Orders = ({ setActiveTab, token }) => {
               onChange={(date) => { setSelectedDate(date); setEditingOrder(prev => ({ ...prev, date: date.toISOString().split('T')[0] })); }}
               dateFormat="dd-MM-yyyy"
             />
-            <Calendar size={16} style={{ color: theme.muted }} />
+            <Calendar size={16} style={{ color: theme.muted, pointerEvents: 'none' }} />
           </SelectDateWrapper>
 
           <SwitchContainer>
@@ -2691,7 +2691,7 @@ const Orders = ({ setActiveTab, token }) => {
             onChange={(date) => setSelectedDate(date)}
             dateFormat="dd-MM-yyyy"
           />
-          <Calendar size={16} style={{ color: theme.muted }} />
+          <Calendar size={16} style={{ color: theme.muted, pointerEvents: 'none' }} />
         </SelectDateWrapper>
 
         <SelectShiftWrapper theme={theme}>
@@ -2793,36 +2793,37 @@ const Orders = ({ setActiveTab, token }) => {
 
         {/* INDIVIDUAL RETAILER CARDS */}
         {(() => {
-          const activeCompanies = retailers.filter(ret => {
-            const comp = companies.find(c => c.firmName === ret.companyName);
-            const isCompActive = comp ? comp.status === 'Active' : true;
+          const activeCompanies = companies.filter(comp => {
+            if (comp.companyType !== 'Retailer') return false;
+            const isCompActive = comp.status === 'Active';
             if (!isCompActive) return false;
 
             if (activeShift === 'Morning') {
-              const order = orders.find(o => o.retailerName === ret.companyName);
+              const order = orders.find(o => o.retailerName === comp.firmName);
               return order ? order.products.some(p => p.morningQty > 0) : false;
             }
             if (activeShift === 'Evening') {
-              const order = orders.find(o => o.retailerName === ret.companyName);
+              const order = orders.find(o => o.retailerName === comp.firmName);
               return order ? order.products.some(p => p.eveningQty > 0) : false;
             }
             return true;
           });
 
-          return activeCompanies.map((ret, idx) => {
-            const order = orders.find(o => o.retailerName === ret.companyName);
+          return activeCompanies.map((comp, idx) => {
+            const order = orders.find(o => o.retailerName === comp.firmName);
             const hasM = order ? order.products.some(p => p.morningQty > 0) : false;
             const hasE = order ? order.products.some(p => p.eveningQty > 0) : false;
+            const userObj = retailers.find(r => r.companyName === comp.firmName);
 
             return (
               <RetailerRow 
-                key={ret._id} 
+                key={comp._id} 
                 theme={theme} 
-                onClick={() => handleEditClick(ret.companyName)}
+                onClick={() => handleEditClick(comp.firmName)}
                 isLast={idx === activeCompanies.length - 1}
               >
                 <span style={{ fontWeight: 700, fontSize: 15, color: theme.text }}>
-                  {ret.companyName}
+                  {comp.firmName}
                 </span>
                 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -2834,7 +2835,7 @@ const Orders = ({ setActiveTab, token }) => {
                       theme={theme} 
                       colorVal="#00AB55"
                       title="Delivery Report"
-                      onClick={(e) => { e.stopPropagation(); handleIndividualDeliveryReport(ret.companyName); }}
+                      onClick={(e) => { e.stopPropagation(); handleIndividualDeliveryReport(comp.firmName); }}
                     >
                       <Truck size={18} />
                     </ActionButton>
@@ -2843,7 +2844,7 @@ const Orders = ({ setActiveTab, token }) => {
                       theme={theme} 
                       colorVal="#00AB55"
                       title="Collection Report"
-                      onClick={(e) => { e.stopPropagation(); openCollectionModal(ret.companyName); }}
+                      onClick={(e) => { e.stopPropagation(); openCollectionModal(comp.firmName); }}
                     >
                       <RupeeIcon size={18} />
                     </ActionButton>
@@ -2852,7 +2853,7 @@ const Orders = ({ setActiveTab, token }) => {
                       theme={theme} 
                       colorVal="#00AB55"
                       title="Purchase Report"
-                      onClick={(e) => { e.stopPropagation(); handleIndividualPurchaseReport(ret.companyName); }}
+                      onClick={(e) => { e.stopPropagation(); handleIndividualPurchaseReport(comp.firmName); }}
                     >
                       <FileText size={18} />
                     </ActionButton>
@@ -2861,7 +2862,7 @@ const Orders = ({ setActiveTab, token }) => {
                       theme={theme} 
                       colorVal="#00AB55"
                       title="Call"
-                      onClick={(e) => { e.stopPropagation(); handleCall(ret); }}
+                      onClick={(e) => { e.stopPropagation(); handleCall(userObj || comp); }}
                     >
                       <Phone size={18} />
                     </ActionButton>

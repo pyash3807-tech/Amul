@@ -230,29 +230,7 @@ const LoginBtn = styled.button`
   }
 `;
 
-const DemoBox = styled.div`
-  margin-top: 32px;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px dashed ${props => props.theme.border};
-  background-color: ${props => props.theme.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'};
-`;
 
-const DemoTitle = styled.div`
-  font-size: 11px;
-  font-weight: 700;
-  color: ${props => props.theme.muted};
-  text-transform: uppercase;
-  margin-bottom: 4px;
-  letter-spacing: 0.5px;
-`;
-
-const DemoText = styled.div`
-  font-size: 13px;
-  color: ${props => props.theme.text};
-  display: flex;
-  justify-content: space-between;
-`;
 
 const Login = ({ onLoginSuccess }) => {
   const { theme } = useContext(ThemeContext);
@@ -303,7 +281,7 @@ const Login = ({ onLoginSuccess }) => {
         <LeftPanel>
           <LogoWrapper>
             <Logo>🐄</Logo>
-            <span style={{ fontWeight: 800, fontSize: '18px', color: '#161c24' }}>KPS-Report</span>
+            <span style={{ fontWeight: 800, fontSize: '18px', color: '#161c24' }}>Amul</span>
           </LogoWrapper>
           <div>
             <WelcomeText>{t('Welcome Back')}</WelcomeText>
@@ -389,13 +367,7 @@ const Login = ({ onLoginSuccess }) => {
             <LoginBtn type="submit" theme={theme}>{t('Login')}</LoginBtn>
           </form>
 
-          <DemoBox theme={theme}>
-            <DemoTitle theme={theme}>Demo Credentials</DemoTitle>
-            <DemoText theme={theme}>
-              <span>Username: <strong>admin</strong></span>
-              <span>Password: <strong>amul123</strong></span>
-            </DemoText>
-          </DemoBox>
+
         </RightPanel>
       </Card>
     </Container>

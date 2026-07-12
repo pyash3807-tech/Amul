@@ -633,13 +633,30 @@ const Users = ({ setActiveTab, token }) => {
   const handleOpenAdd = () => {
     setFormData({
       companyName: '',
+      company: '',
       username: '',
       password: '',
       firstName: '',
       lastName: '',
       type: 'Retailer',
       status: 'Active',
-      role: 'Retailer'
+      role: 'Retailer',
+      middleName: '',
+      parentCompany: 'Yash Milk Marketing-Rajkot-1007459M',
+      address: '',
+      society: '',
+      ward: '',
+      state: 'Gujarat',
+      city: 'Rajkot',
+      pincode: '',
+      whatsapp: '',
+      mobile1: '',
+      mobile2: '',
+      email: '',
+      aadhaarCard: '',
+      panCard: '',
+      drivingLicense: '',
+      electricityBill: ''
     });
     setAddModalOpen(true);
   };
@@ -740,14 +757,22 @@ const Users = ({ setActiveTab, token }) => {
     <Container>
       {subView === 'edit' ? (
         <>
-          <Title theme={theme}>Edit User</Title>
           <Breadcrumb theme={theme}>
-            <BreadLink theme={theme} onClick={() => setActiveTab('dashboard')}>Dashboard</BreadLink>
+            <BreadLink theme={theme} onClick={() => setActiveTab('dashboard')}>{t('Dashboard')}</BreadLink>
             <span>•</span>
             <BreadLink theme={theme} onClick={() => setSubView('list')}>Users</BreadLink>
             <span>•</span>
             <span>{formData.firstName} {formData.lastName}</span>
           </Breadcrumb>
+
+          <HeaderRow>
+            <div>
+              <Title theme={theme} style={{ margin: 0 }}>Edit User</Title>
+            </div>
+            <OutlineBtn theme={theme} onClick={() => setSubView('list')}>
+              <ArrowLeft size={16} /> Back to Users
+            </OutlineBtn>
+          </HeaderRow>
 
           <EditContainer theme={theme}>
             <TabContainer theme={theme}>
@@ -876,7 +901,7 @@ const Users = ({ setActiveTab, token }) => {
                       theme={theme}
                     >
                       {companiesList.length > 0 ? (
-                        companiesList.map(comp => (
+                        companiesList.filter(comp => comp.status === 'Active').map(comp => (
                           <option key={comp._id} value={comp.firmName}>
                             {comp.firmName}
                           </option>
@@ -1212,7 +1237,20 @@ const Users = ({ setActiveTab, token }) => {
             <Form onSubmit={handleAddSubmit}>
               <FormGroup>
                 <Label theme={theme}>Company Name</Label>
-                <Input type="text" name="companyName" value={formData.companyName} onChange={handleFormChange} required theme={theme} />
+                <Select 
+                  name="company" 
+                  value={formData.company || ''} 
+                  onChange={handleFormChange} 
+                  required 
+                  theme={theme}
+                >
+                  <option value="">Select Company</option>
+                  {companiesList.filter(comp => comp.status === 'Active').map(comp => (
+                    <option key={comp._id} value={comp.firmName}>
+                      {comp.firmName}
+                    </option>
+                  ))}
+                </Select>
               </FormGroup>
               <FormGroup>
                 <Label theme={theme}>Username</Label>

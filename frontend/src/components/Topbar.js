@@ -155,6 +155,12 @@ const DropdownItem = styled.div`
   }
 `;
 
+const Divider = styled.div`
+  height: 1px;
+  background-color: ${props => props.theme.border};
+  margin: 4px 0;
+`;
+
 const Topbar = ({ collapsed, sidebarOpen, setSidebarOpen, activeTab, setActiveTab, onOpenSettings, onLogout, user }) => {
   const { theme } = useContext(ThemeContext);
   const { t, i18n } = useTranslation();
@@ -200,23 +206,35 @@ const Topbar = ({ collapsed, sidebarOpen, setSidebarOpen, activeTab, setActiveTa
           </UserAvatar>
 
           <Dropdown isOpen={dropdownOpen} theme={theme}>
-            <DropdownHeader theme={theme}>
-              <DropdownName>{user?.firstName} {user?.lastName}</DropdownName>
-              <DropdownEmail theme={theme}>{emailDisplay}</DropdownEmail>
+            <DropdownHeader theme={theme} style={{ borderBottom: 'none', padding: '12px 16px 8px 16px' }}>
+              <DropdownEmail theme={theme} style={{ color: theme.text, opacity: 0.8, fontSize: '13.5px', fontWeight: 500 }}>{emailDisplay}</DropdownEmail>
             </DropdownHeader>
+            
+            <Divider theme={theme} />
 
             <DropdownItem theme={theme} onClick={() => { setDropdownOpen(false); setActiveTab('dashboard'); }}>
-              <LayoutGrid size={16} />
               {t('Dashboard')}
             </DropdownItem>
 
+            <DropdownItem theme={theme} onClick={() => { setDropdownOpen(false); setActiveTab('account'); }}>
+              {t('Profile')}
+            </DropdownItem>
+
+            <DropdownItem theme={theme} onClick={() => { setDropdownOpen(false); setActiveTab('companies'); }}>
+              {t('Company Profile')}
+            </DropdownItem>
+
             <DropdownItem theme={theme} onClick={() => { setDropdownOpen(false); onOpenSettings(); }}>
-              <SettingsIcon size={16} />
               {t('Theme Settings')}
             </DropdownItem>
 
-            <DropdownItem theme={theme} danger onClick={() => { setDropdownOpen(false); onLogout(); }}>
-              <LogOut size={16} />
+            <DropdownItem theme={theme} onClick={() => { setDropdownOpen(false); alert('Application is up to date!'); }}>
+              {t('Update App')}
+            </DropdownItem>
+
+            <Divider theme={theme} />
+
+            <DropdownItem theme={theme} onClick={() => { setDropdownOpen(false); onLogout(); }}>
               {t('Logout')}
             </DropdownItem>
           </Dropdown>

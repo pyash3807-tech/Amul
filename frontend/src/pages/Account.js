@@ -11,7 +11,9 @@ import {
   Plus, 
   Layers,
   Calendar,
-  Save
+  Save,
+  ArrowLeft,
+  X
 } from 'lucide-react';
 import axios from 'axios';
 import DatePicker from 'react-datepicker';
@@ -416,6 +418,82 @@ const DatePickerWrapper = styled.div`
   }
 `;
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(22, 28, 36, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1100;
+`;
+
+const ModalContent = styled.div`
+  background-color: ${props => props.theme.card};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 16px;
+  width: ${props => props.width || '500px'};
+  padding: 24px;
+  box-shadow: 0 12px 24px -4px rgba(145, 158, 171, 0.12), 0 0 2px 0 rgba(145, 158, 171, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const ModalTitle = styled.h3`
+  font-size: 18px;
+  font-weight: 700;
+  color: ${props => props.theme.text};
+  margin: 0;
+`;
+
+const CloseBtn = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.theme.muted};
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: ${props => props.theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'};
+    color: ${props => props.theme.text};
+  }
+`;
+
+const FormRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  @media (max-width: 576px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const HeaderRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+`;
+
 const Account = ({ setActiveTab: setAppActiveTab, token }) => {
   const { theme } = useContext(ThemeContext);
   const { t } = useTranslation();
@@ -441,6 +519,17 @@ const Account = ({ setActiveTab: setAppActiveTab, token }) => {
 
   const [alertMsg, setAlertMsg] = useState('');
 
+  // Bulk Payment & Ledger states
+  const [subView, setSubView] = useState('tabs'); // 'tabs' or 'bulk_payment'
+  const [companiesList, setCompaniesList] = useState([]);
+  const [ordersList, setOrdersList] = useState([]);
+  const [bulkRows, setBulkRows] = useState([]);
+  
+  const [ledgerModalOpen, setLedgerModalOpen] = useState(false);
+  const [ledgerRetailer, setLedgerRetailer] = useState('All');
+  const [ledgerFromDate, setLedgerFromDate] = useState(new Date());
+  const [ledgerToDate, setLedgerToDate] = useState(new Date());
+
   const fetchSummary = async () => {
     try {
       const res = await axios.get('/api/accounts/summary', {
@@ -464,12 +553,91 @@ const Account = ({ setActiveTab: setAppActiveTab, token }) => {
     }
   };
 
+  const fetchCompanies = async () => {
+    try {
+      const res = await axios.get('/api/companies', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCompaniesList(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      const res = await axios.get('/api/orders', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrdersList(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const getRetailerBalance = (retailerName, currentOrders, currentTrans) => {
+    const targetOrders = currentOrders || ordersList;
+    const targetTrans = currentTrans || transactions;
+
+    const retailerOrders = targetOrders.filter(o => o.retailerName === retailerName);
+    const totalOrderAmt = retailerOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+    const retailerTrans = targetTrans.filter(t => t.to === retailerName || t.from === retailerName);
+    
+    let debitTrans = 0;
+    let creditTrans = 0;
+    let adjustTrans = 0;
+
+    retailerTrans.forEach(t => {
+      if (t.type === 'Debit') {
+        debitTrans += t.amount || 0;
+      } else if (t.type === 'Credit') {
+        creditTrans += t.amount || 0;
+      } else if (t.type === 'Adjust') {
+        adjustTrans += t.amount || 0;
+      }
+    });
+
+    return (totalOrderAmt + debitTrans) - (creditTrans + adjustTrans);
+  };
+
+  const getOpeningBalance = (retailerName, startDate) => {
+    const priorOrders = ordersList.filter(o => 
+      (retailerName === 'All' || o.retailerName === retailerName) &&
+      o.date < startDate
+    );
+    const totalOrderAmt = priorOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+    const priorTrans = transactions.filter(t => 
+      (retailerName === 'All' || t.to === retailerName || t.from === retailerName) &&
+      t.date < startDate
+    );
+
+    let debitTrans = 0;
+    let creditTrans = 0;
+    let adjustTrans = 0;
+
+    priorTrans.forEach(t => {
+      if (t.type === 'Debit') {
+        debitTrans += t.amount || 0;
+      } else if (t.type === 'Credit') {
+        creditTrans += t.amount || 0;
+      } else if (t.type === 'Adjust') {
+        adjustTrans += t.amount || 0;
+      }
+    });
+
+    return (totalOrderAmt + debitTrans) - (creditTrans + adjustTrans);
+  };
+
   useEffect(() => {
     if (token) {
       fetchSummary();
       fetchTransactions();
+      fetchCompanies();
+      fetchOrders();
     }
-  }, [filterType, filterPayment, filterSearch, activeTab, token]);
+  }, [filterType, filterPayment, filterSearch, activeTab, subView, token]);
 
   const handleSaveTransaction = async (e) => {
     e.preventDefault();
@@ -526,38 +694,411 @@ const Account = ({ setActiveTab: setAppActiveTab, token }) => {
     }
   };
 
+  const handleBulkPaymentOpen = () => {
+    const activeRetailers = companiesList.filter(comp => comp.companyType === 'Retailer' && comp.status === 'Active');
+    const rows = activeRetailers.map(comp => ({
+      retailerId: comp._id,
+      retailerName: comp.firmName,
+      balance: getRetailerBalance(comp.firmName),
+      adjustAmount: '',
+      type: 'Credit',
+      payment: 'Cash',
+      reference: '',
+      remark: ''
+    }));
+    setBulkRows(rows);
+    setSubView('bulk_payment');
+  };
+
+  const handleBulkRowChange = (index, field, value) => {
+    setBulkRows(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleSaveBulkAll = async () => {
+    const rowsToSave = bulkRows.filter(row => Number(row.adjustAmount) > 0);
+    if (rowsToSave.length === 0) {
+      alert('No adjustment amounts entered.');
+      return;
+    }
+
+    setAlertMsg('Saving bulk payments...');
+    try {
+      await Promise.all(rowsToSave.map(row => 
+        axios.post('/api/accounts/transactions', {
+          date: new Date().toISOString().split('T')[0],
+          from: 'Yash Milk',
+          to: row.retailerName,
+          type: row.type,
+          payment: row.payment,
+          amount: Number(row.adjustAmount),
+          adjust: 0,
+          reference: row.reference,
+          remark: row.remark
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ));
+      
+      alert('Success! Bulk payments saved successfully.');
+      setSubView('tabs');
+      setAlertMsg('');
+      
+      // Force refresh
+      fetchTransactions();
+      fetchSummary();
+      fetchOrders();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save some bulk payments');
+      setAlertMsg('');
+    }
+  };
+
+  const generateExcel = (openingBalance, ledgerRows, startDateStr, endDateStr, retailerSel) => {
+    const tableHtml = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <!--[if gte mso 9]>
+        <xml>
+          <x:ExcelWorkbook>
+            <x:ExcelWorksheets>
+              <x:ExcelWorksheet>
+                <x:Name>Account Ledger</x:Name>
+                <x:WorksheetOptions>
+                  <x:DisplayGridlines/>
+                </x:WorksheetOptions>
+              </x:ExcelWorksheet>
+            </x:ExcelWorksheets>
+          </x:ExcelWorkbook>
+        </xml>
+        <![endif]-->
+        <style>
+          table { border-collapse: collapse; width: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+          th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+          th { background-color: #00AB55; color: white; font-weight: bold; }
+          .header-row { font-size: 16px; font-weight: bold; background-color: #f4f6f8; text-align: center; }
+          .balance-cell { font-weight: bold; color: #1e3a8a; }
+          .debit-cell { color: #b91c1c; }
+          .credit-cell { color: #047857; }
+        </style>
+      </head>
+      <body>
+        <table>
+          <tr class="header-row">
+            <td colspan="8" style="text-align: center; font-size: 16px; font-weight: bold; padding: 12px;">Account Ledger: ${retailerSel}</td>
+          </tr>
+          <tr class="header-row">
+            <td colspan="8" style="text-align: center; font-size: 14px; padding: 8px;">Period: ${startDateStr} to ${endDateStr}</td>
+          </tr>
+          <tr>
+            <th>Sr. No</th>
+            <th>Date</th>
+            <th>Particulars</th>
+            <th>Voucher Type</th>
+            <th>Voucher No</th>
+            <th>Debit (Rs.)</th>
+            <th>Credit (Rs.)</th>
+            <th>Balance (Rs.)</th>
+          </tr>
+          <tr>
+            <td>-</td>
+            <td colspan="4" style="font-weight: bold;">Opening Balance</td>
+            <td>-</td>
+            <td>-</td>
+            <td class="balance-cell">${openingBalance.toFixed(2)}</td>
+          </tr>
+          ${ledgerRows.map((row, idx) => `
+            <tr>
+              <td>${idx + 1}</td>
+              <td>${row.date}</td>
+              <td>${row.particulars}</td>
+              <td>${row.voucherType}</td>
+              <td>${row.voucherNo}</td>
+              <td class="debit-cell">${row.debit > 0 ? row.debit.toFixed(2) : '-'}</td>
+              <td class="credit-cell">${row.credit > 0 ? row.credit.toFixed(2) : '-'}</td>
+              <td class="balance-cell">${row.runningBalance.toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Account_Ledger_${retailerSel}_${startDateStr}_to_${endDateStr}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleGenerateLedger = () => {
+    const fromDateStr = ledgerFromDate.toISOString().split('T')[0];
+    const toDateStr = ledgerToDate.toISOString().split('T')[0];
+
+    // 1. Calculate opening balance
+    const openingBalance = getOpeningBalance(ledgerRetailer, fromDateStr);
+
+    // 2. Fetch and filter orders in range
+    const rangeOrders = ordersList.filter(o =>
+      (ledgerRetailer === 'All' || o.retailerName === ledgerRetailer) &&
+      o.date >= fromDateStr && o.date <= toDateStr
+    ).map(o => ({
+      date: o.date,
+      particulars: `Order - ${o.retailerName}`,
+      voucherType: 'Order',
+      voucherNo: o.morningPONumber || o.eveningPONumber || o._id?.substring(0, 8) || 'N/A',
+      debit: o.totalAmount || 0,
+      credit: 0
+    }));
+
+    // 3. Fetch and filter transactions in range
+    const rangeTrans = transactions.filter(t =>
+      (ledgerRetailer === 'All' || t.to === ledgerRetailer || t.from === ledgerRetailer) &&
+      t.date >= fromDateStr && t.date <= toDateStr
+    ).map(t => ({
+      date: t.date,
+      particulars: `${t.type} - ${t.payment} (${t.from} to ${t.to})`,
+      voucherType: t.type === 'Debit' ? 'Debit' : (t.type === 'Credit' ? 'Receipt' : 'Adjustment'),
+      voucherNo: t.reference || t._id?.substring(0, 8) || 'N/A',
+      debit: t.type === 'Debit' ? t.amount : 0,
+      credit: (t.type === 'Credit' || t.type === 'Adjust') ? t.amount : 0
+    }));
+
+    // 4. Combine and sort ascending to calculate running balance
+    const combined = [...rangeOrders, ...rangeTrans].sort((a, b) => a.date.localeCompare(b.date));
+
+    // 5. Calculate running balance chronologically
+    let running = openingBalance;
+    const rowsWithBalance = combined.map(row => {
+      running = running + row.debit - row.credit;
+      return { ...row, runningBalance: running };
+    });
+
+    // 6. Sort descending by date for final ledger report display
+    rowsWithBalance.sort((a, b) => b.date.localeCompare(a.date));
+
+    // 7. Generate Excel XML/HTML download
+    generateExcel(openingBalance, rowsWithBalance, fromDateStr, toDateStr, ledgerRetailer);
+    
+    // 8. Close modal
+    setLedgerModalOpen(false);
+  };
+
   return (
     <Container>
-      <Title theme={theme}>{t('Account')}</Title>
-      <Breadcrumb theme={theme}>
-        <BreadLink theme={theme} onClick={() => setAppActiveTab('dashboard')}>Dashboard</BreadLink>
-        <span>•</span>
-        <span>Account</span>
-      </Breadcrumb>
+      {ledgerModalOpen && (
+        <ModalOverlay onClick={() => setLedgerModalOpen(false)}>
+          <ModalContent theme={theme} onClick={(e) => e.stopPropagation()} style={{ width: '400px' }}>
+            <ModalHeader>
+              <ModalTitle theme={theme}>Generate Account Ledger Report</ModalTitle>
+              <CloseBtn theme={theme} onClick={() => setLedgerModalOpen(false)}>
+                <X size={20} />
+              </CloseBtn>
+            </ModalHeader>
+            
+            <FormGroup style={{ marginBottom: '16px' }}>
+              <FormLabel theme={theme}>Retailer</FormLabel>
+              <FormSelect 
+                theme={theme} 
+                value={ledgerRetailer} 
+                onChange={(e) => setLedgerRetailer(e.target.value)}
+              >
+                <option value="All">All Retailers</option>
+                {companiesList.filter(c => c.companyType === 'Retailer' && c.status === 'Active').map(c => (
+                  <option key={c._id} value={c.firmName}>{c.firmName}</option>
+                ))}
+              </FormSelect>
+            </FormGroup>
 
-      <TopActions>
-        <OutlineBtn theme={theme} onClick={() => alert("Bulk Payment Action Triggered")}>
-          <Wallet size={16} />
-          {t('Bulk Payment')}
-        </OutlineBtn>
-        <OutlineBtn theme={theme} onClick={() => alert("Account Ledger Action Triggered")}>
-          <Layers size={16} />
-          {t('Account Ledger')}
-        </OutlineBtn>
-        <OutlineBtn theme={theme} onClick={() => alert("Sales/Purchase Register Action Triggered")}>
-          <Layers size={16} />
-          {t('Sales/Purchase Register')}
-        </OutlineBtn>
-      </TopActions>
+            <FormRow style={{ marginBottom: '24px' }}>
+              <FormGroup>
+                <FormLabel theme={theme}>From Date</FormLabel>
+                <DatePickerWrapper theme={theme}>
+                  <DatePicker 
+                    selected={ledgerFromDate} 
+                    onChange={(date) => setLedgerFromDate(date)} 
+                    dateFormat="yyyy-MM-dd"
+                  />
+                </DatePickerWrapper>
+              </FormGroup>
 
-      <TabContainer theme={theme}>
-        <Tab active={activeTab === 'overview'} theme={theme} onClick={() => setActiveTab('overview')}>
-          {t('Account Overview')}
-        </Tab>
-        <Tab active={activeTab === 'add_transaction'} theme={theme} onClick={() => setActiveTab('add_transaction')}>
-          {t('Add Transaction')}
-        </Tab>
-      </TabContainer>
+              <FormGroup>
+                <FormLabel theme={theme}>To Date</FormLabel>
+                <DatePickerWrapper theme={theme}>
+                  <DatePicker 
+                    selected={ledgerToDate} 
+                    onChange={(date) => setLedgerToDate(date)} 
+                    dateFormat="yyyy-MM-dd"
+                  />
+                </DatePickerWrapper>
+              </FormGroup>
+            </FormRow>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <SaveTransactionBtn theme={theme} onClick={handleGenerateLedger}>
+                Generate Report
+              </SaveTransactionBtn>
+              <OutlineBtn theme={theme} style={{ width: '100%', justifyContent: 'center' }} onClick={() => setLedgerModalOpen(false)}>
+                Cancel
+              </OutlineBtn>
+            </div>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {subView === 'bulk_payment' ? (
+        <>
+          <Breadcrumb theme={theme}>
+            <BreadLink theme={theme} onClick={() => setAppActiveTab('dashboard')}>Dashboard</BreadLink>
+            <span>•</span>
+            <BreadLink theme={theme} onClick={() => setSubView('tabs')}>Account</BreadLink>
+            <span>•</span>
+            <span>Bulk Payment</span>
+          </Breadcrumb>
+
+          <HeaderRow>
+            <div>
+              <Title theme={theme} style={{ margin: 0 }}>Retailer Bulk Payment Management</Title>
+            </div>
+            <OutlineBtn theme={theme} onClick={() => setSubView('tabs')}>
+              <ArrowLeft size={16} /> Back to Account
+            </OutlineBtn>
+          </HeaderRow>
+
+          <TableWrapper theme={theme}>
+            <Table>
+              <thead>
+                <tr>
+                  <Th theme={theme}>Retailer Name</Th>
+                  <Th theme={theme}>Balance (Debit)</Th>
+                  <Th theme={theme}>Adjust Amount (Rs.)</Th>
+                  <Th theme={theme}>Transaction Type</Th>
+                  <Th theme={theme}>Payment Type</Th>
+                  <Th theme={theme}>Reference</Th>
+                  <Th theme={theme}>Remark</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {bulkRows.length > 0 ? (
+                  bulkRows.map((row, idx) => (
+                    <tr key={row.retailerId}>
+                      <Td theme={theme} style={{ fontWeight: 600 }}>{row.retailerName}</Td>
+                      <Td theme={theme} style={{ fontWeight: 600, color: row.balance > 0 ? '#b91c1c' : '#047857' }}>
+                        ₹{row.balance.toLocaleString()}
+                      </Td>
+                      <Td theme={theme}>
+                        <FormInput 
+                          type="number" 
+                          placeholder="0.00" 
+                          value={row.adjustAmount} 
+                          onChange={(e) => handleBulkRowChange(idx, 'adjustAmount', e.target.value)} 
+                          theme={theme}
+                          style={{ width: '90px', padding: '8px' }}
+                        />
+                      </Td>
+                      <Td theme={theme}>
+                        <FormSelect 
+                          value={row.type} 
+                          onChange={(e) => handleBulkRowChange(idx, 'type', e.target.value)} 
+                          theme={theme}
+                          style={{ padding: '8px', width: '95px' }}
+                        >
+                          <option value="Credit">Credit</option>
+                          <option value="Debit">Debit</option>
+                        </FormSelect>
+                      </Td>
+                      <Td theme={theme}>
+                        <FormSelect 
+                          value={row.payment} 
+                          onChange={(e) => handleBulkRowChange(idx, 'payment', e.target.value)} 
+                          theme={theme}
+                          style={{ padding: '8px', width: '95px' }}
+                        >
+                          <option value="Cash">Cash</option>
+                          <option value="Bank">Bank</option>
+                          <option value="Online">Online</option>
+                          <option value="Cheque">Cheque</option>
+                        </FormSelect>
+                      </Td>
+                      <Td theme={theme}>
+                        <FormInput 
+                          type="text" 
+                          placeholder="Reference" 
+                          value={row.reference} 
+                          onChange={(e) => handleBulkRowChange(idx, 'reference', e.target.value)} 
+                          theme={theme}
+                          style={{ width: '100px', padding: '8px' }}
+                        />
+                      </Td>
+                      <Td theme={theme}>
+                        <FormInput 
+                          type="text" 
+                          placeholder="Remark" 
+                          value={row.remark} 
+                          onChange={(e) => handleBulkRowChange(idx, 'remark', e.target.value)} 
+                          theme={theme}
+                          style={{ width: '120px', padding: '8px' }}
+                        />
+                      </Td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <Td colspan="7" style={{ textAlign: 'center', padding: '24px' }}>No active retailers found.</Td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+          </TableWrapper>
+
+          <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+            <SaveTransactionBtn theme={theme} style={{ width: 'auto', padding: '12px 32px' }} onClick={handleSaveBulkAll}>
+              Save All
+            </SaveTransactionBtn>
+            <OutlineBtn theme={theme} onClick={() => setSubView('tabs')}>
+              Cancel
+            </OutlineBtn>
+          </div>
+        </>
+      ) : (
+        <>
+          <Title theme={theme}>{t('Account')}</Title>
+          <Breadcrumb theme={theme}>
+            <BreadLink theme={theme} onClick={() => setAppActiveTab('dashboard')}>Dashboard</BreadLink>
+            <span>•</span>
+            <span>Account</span>
+          </Breadcrumb>
+
+          <TopActions>
+            <OutlineBtn theme={theme} onClick={handleBulkPaymentOpen}>
+              <Wallet size={16} />
+              {t('Bulk Payment')}
+            </OutlineBtn>
+            <OutlineBtn theme={theme} onClick={() => setLedgerModalOpen(true)}>
+              <Layers size={16} />
+              {t('Account Ledger')}
+            </OutlineBtn>
+            <OutlineBtn theme={theme} onClick={() => alert("Sales/Purchase Register Action Triggered")}>
+              <Layers size={16} />
+              {t('Sales/Purchase Register')}
+            </OutlineBtn>
+          </TopActions>
+
+          <TabContainer theme={theme}>
+            <Tab active={activeTab === 'overview'} theme={theme} onClick={() => setActiveTab('overview')}>
+              {t('Account Overview')}
+            </Tab>
+            <Tab active={activeTab === 'add_transaction'} theme={theme} onClick={() => setActiveTab('add_transaction')}>
+              {t('Add Transaction')}
+            </Tab>
+          </TabContainer>
 
       {alertMsg && (
         <div style={{ padding: '12px', backgroundColor: '#e2f9ec', color: '#00AB55', borderRadius: '8px', marginBottom: '20px', fontSize: '14px', fontWeight: 600 }}>
@@ -803,6 +1344,8 @@ const Account = ({ setActiveTab: setAppActiveTab, token }) => {
             💾 {t('Save Changes')}
           </SaveTransactionBtn>
         </Form>
+      )}
+        </>
       )}
     </Container>
   );

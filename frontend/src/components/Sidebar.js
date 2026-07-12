@@ -258,9 +258,11 @@ const Sidebar = ({ collapsed, setCollapsed, activeTab, setActiveTab, user }) => 
   return (
     <SidebarContainer collapsed={collapsed} theme={theme}>
       <TopHeader collapsed={collapsed}>
-        <LogoWrapper>
-          <LogoSvg />
-        </LogoWrapper>
+        {!collapsed && (
+          <LogoWrapper>
+            <LogoSvg />
+          </LogoWrapper>
+        )}
         <ToggleBtn onClick={() => setCollapsed(!collapsed)} theme={theme} collapsed={collapsed}>
           <ChevronLeft size={16} />
         </ToggleBtn>
